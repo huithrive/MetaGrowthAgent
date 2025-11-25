@@ -1,0 +1,11 @@
+from typing import Generator
+
+from sqlmodel import Session
+
+from app.db import get_session
+
+
+def get_db_session() -> Generator[Session, None, None]:
+    with get_session() as session:
+        yield session
+
