@@ -109,21 +109,31 @@ class ApiService {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers,
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...options,
+        headers,
+      });
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        this.clearToken();
-        throw new Error('Unauthorized - please login again');
+      if (!response.ok) {
+        if (response.status === 401) {
+          this.clearToken();
+          throw new Error('Unauthorized - please login again');
+        }
+        const error = await response.json().catch(() => ({ detail: 'Request failed' }));
+        throw new Error(error.detail || `HTTP error! status: ${response.status}`);
       }
-      const error = await response.json().catch(() => ({ detail: 'Request failed' }));
-      throw new Error(error.detail || `HTTP error! status: ${response.status}`);
-    }
 
-    return response.json();
+      return response.json();
+    } catch (error: any) {
+      // Handle network errors (backend not available, CORS, etc.)
+      if (error.message?.includes('Failed to fetch') || 
+          error.message?.includes('NetworkError') ||
+          error.name === 'TypeError') {
+        throw new Error('Backend not available - using demo mode');
+      }
+      throw error;
+    }
   }
 
   // Auth endpoints
