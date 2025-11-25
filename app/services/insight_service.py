@@ -7,6 +7,7 @@ import google.generativeai as genai
 from jinja2 import Template
 
 from app.config import get_settings
+from app.services.ai_providers import AIProviderFactory
 
 settings = get_settings()
 
@@ -39,18 +40,36 @@ class InsightService:
     def render_prompt(self, meta: dict[str, Any], competitor: dict[str, Any]) -> str:
         return INSIGHT_TEMPLATE.render(meta=meta, competitor=competitor)
 
-    def generate(self, meta: dict[str, Any], competitor: dict[str, Any]) -> dict[str, Any]:
+    def generate(self, meta: dict[str, Any], competitor: dict[str, Any], provider: str | None = None, model: str | None = None) -> dict[str, Any]:
         prompt = self.render_prompt(meta, competitor)
-        provider = settings.llm_provider.lower()
-        if provider == "claude" and self._anthropic:
+        provider_name = provider or settings.llm_provider.lower()
+        
+        # Use new AI provider system if available
+        try:
+            ai_provider = AIProviderFactory.get_provider(provider_name)
+            response = ai_provider.generate(prompt, model=model, max_tokens=2000)
+            return {"text": response.content, "provider": response.provider, "model": response.model}
+        except (ValueError, Exception):
+            # Fallback to old system
+            pass
+        
+        # Legacy fallback
+        if provider_name == "claude" and self._anthropic:
+            model_name = model or "claude-3-5-sonnet-20240620"
             message = self._anthropic.messages.create(
-                model="claude-3-5-sonnet-20240620",
+                model=model_name,
                 max_tokens=800,
                 messages=[{"role": "user", "content": prompt}],
             )
             text = message.content[0].text if message.content else ""
-        elif provider == "gemini" and self._gemini:
-            resp = self._gemini.generate_content(prompt)
+        elif provider_name == "gemini" and self._gemini:
+            # Support Gemini 3 models
+            model_name = model or "gemini-1.5-pro"
+            try:
+                genai_model = genai.GenerativeModel(model_name)
+            except Exception:
+                genai_model = self._gemini
+            resp = genai_model.generate_content(prompt)
             text = resp.text or ""
         else:
             text = (
@@ -64,5 +83,5 @@ class InsightService:
                 "- Capture organic terms they dominate via content partnerships.\n"
                 "- Build affiliate promos to counter their influencer push.\n"
             )
-        return {"text": text, "provider": provider}
+        return {"text": text, "provider": provider_name, "model": model or "default"}
 

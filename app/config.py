@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     llm_provider: str = Field("claude", alias="LLM_PROVIDER")
     anthropic_api_key: str = Field("", alias="ANTHROPIC_API_KEY")
     google_api_key: str = Field("", alias="GOOGLE_API_KEY")
+    
+    # Gemini model selection (supports gemini-3-pro-preview, gemini-1.5-pro, etc.)
+    gemini_model: str = Field("gemini-1.5-pro", alias="GEMINI_MODEL")
+    
+    # Claude model selection
+    claude_model: str = Field("claude-3-5-sonnet-20240620", alias="CLAUDE_MODEL")
 
     alert_webhook_url: str = Field("", alias="ALERT_WEBHOOK_URL")
     alert_emails: str = Field("", alias="ALERT_EMAILS")
