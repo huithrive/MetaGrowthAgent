@@ -46,66 +46,77 @@ const App: React.FC = () => {
     setStage(AppStage.WAITING_INITIAL);
     
     try {
-      // Trigger refresh on backend - this will queue the analysis
-      await apiService.refreshReport(accId, true);
+      // Try backend first, but fallback to demo mode if unavailable
+      let useBackend = false;
+      try {
+        await apiService.refreshReport(accId, true);
+        useBackend = true;
+      } catch (backendError) {
+        console.warn('Backend not available, using demo mode:', backendError);
+        useBackend = false;
+      }
       
-      // Wait a bit for processing
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // Poll for report (with timeout)
-      let attempts = 0;
-      const maxAttempts = 20;
-      let report = null;
+      if (useBackend) {
+        // Wait a bit for processing
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Poll for report (with timeout)
+        let attempts = 0;
+        const maxAttempts = 20;
+        let report = null;
 
-      while (attempts < maxAttempts && !report) {
-        try {
-          const response = await apiService.getReport(accId);
-          report = response.report;
-          
-          // Extract competitors from report
-          const compData = report.competitor || {};
-          const competitorsList: Competitor[] = Object.entries(compData).map(([key, value]: [string, any]) => ({
-            name: value.name || key,
-            url: value.url || key,
-            strength: value.strength || 'Analysis pending',
-          }));
+        while (attempts < maxAttempts && !report) {
+          try {
+            const response = await apiService.getReport(accId);
+            report = response.report;
+            
+            // Extract competitors from report
+            const compData = report.competitor || {};
+            const competitorsList: Competitor[] = Object.entries(compData).map(([key, value]: [string, any]) => ({
+              name: value.name || key,
+              url: value.url || key,
+              strength: value.strength || 'Analysis pending',
+            }));
 
-          if (competitorsList.length > 0) {
-            setCompetitors(competitorsList);
-            setStage(AppStage.SELECT_COMPETITORS);
-            return;
+            if (competitorsList.length > 0) {
+              setCompetitors(competitorsList);
+              setStage(AppStage.SELECT_COMPETITORS);
+              return;
+            }
+          } catch (error: any) {
+            // Report not ready yet, continue polling
+            if (error.message?.includes('404') || error.message?.includes('Failed to fetch')) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              attempts++;
+              continue;
+            }
+            break; // Exit loop on other errors
           }
-        } catch (error: any) {
-          // Report not ready yet, continue polling
-          if (error.message?.includes('404')) {
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            attempts++;
-            continue;
-          }
-          throw error;
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
-        attempts++;
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
 
-      // If we got here, either report is ready or timeout
-      if (report) {
-        const analysisResult = apiService.transformReportToAnalysis(report, inputUrl);
-        setAnalysis(analysisResult);
-        setStage(AppStage.DASHBOARD);
-      } else {
-        // Fallback: show competitor selection with mock data
-        setCompetitors([
-          { name: "Market Leader Alpha", url: "competitor-a.com", strength: "High Frequency Ads" },
-          { name: "Sector Target Beta", url: "competitor-b.com", strength: "Video Velocity" },
-          { name: "Sector Target Gamma", url: "competitor-c.com", strength: "Aggressive Offers" },
-          { name: "Niche Disruptor", url: "competitor-d.com", strength: "Low CPM Strategy" },
-          { name: "Legacy Brand", url: "competitor-e.com", strength: "High AOV Bundles" },
-        ]);
-        setStage(AppStage.SELECT_COMPETITORS);
+        // If we got a report, use it
+        if (report) {
+          const analysisResult = apiService.transformReportToAnalysis(report, inputUrl);
+          setAnalysis(analysisResult);
+          setStage(AppStage.DASHBOARD);
+          return;
+        }
       }
+      
+      // Fallback: show competitor selection with mock data (demo mode)
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate processing
+      setCompetitors([
+        { name: "Market Leader Alpha", url: "competitor-a.com", strength: "High Frequency Ads" },
+        { name: "Sector Target Beta", url: "competitor-b.com", strength: "Video Velocity" },
+        { name: "Sector Target Gamma", url: "competitor-c.com", strength: "Aggressive Offers" },
+        { name: "Niche Disruptor", url: "competitor-d.com", strength: "Low CPM Strategy" },
+        { name: "Legacy Brand", url: "competitor-e.com", strength: "High AOV Bundles" },
+      ]);
+      setStage(AppStage.SELECT_COMPETITORS);
     } catch (error) {
-      console.error('Analysis failed:', error);
+      console.error('Analysis failed, using demo mode:', error);
       // Fallback to competitor selection
       setCompetitors([
         { name: "Market Leader Alpha", url: "competitor-a.com", strength: "High Frequency Ads" },
