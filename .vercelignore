@@ -1,0 +1,12 @@
+# Exclude everything except frontend
+*
+
+# But include frontend
+!frontend/
+
+# Exclude frontend build artifacts
+frontend/dist/
+frontend/node_modules/
+frontend/.vite/
+frontend/.env.local
+
