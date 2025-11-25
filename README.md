@@ -1,6 +1,6 @@
 # Meta Growth Agent
 
-A modular backend foundation that fuses Meta Ads diagnostics, third-party traffic intelligence, and LLM-driven narrative insights to surface e-commerce growth opportunities on an hourly cadence (and on-demand at login).
+A full-stack platform that fuses Meta Ads diagnostics, third-party traffic intelligence, and LLM-driven narrative insights to surface e-commerce growth opportunities. Includes a modern React frontend for e-commerce business owners and micro agency marketers.
 
 ## High-Level Architecture
 
@@ -48,6 +48,8 @@ Competitor API┘                                   │                         
 
 ## Getting Started
 
+### Backend Setup
+
 ```bash
 uv venv --python 3.11
 source .venv/bin/activate
@@ -61,13 +63,25 @@ cp .env.example .env
 docker compose up -d redis postgres
 ```
 
-### Run API & Workers
+### Run Backend API & Workers
 
 ```bash
 uvicorn app.main:app --reload
 celery -A app.tasks.worker worker -l info
 celery -A app.tasks.worker beat -l info
 ```
+
+### Frontend Setup
+
+```bash
+cd frontend
+npm install
+cp .env.example .env.local
+# Edit .env.local and set VITE_API_URL=http://localhost:8000
+npm run dev
+```
+
+The frontend will be available at `http://localhost:5173` and will connect to the backend API.
 
 ## Configuration
 
@@ -106,6 +120,10 @@ app/
     schedules.py
     worker.py
     refresh.py
+frontend/                # React + TypeScript frontend
+  components/            # UI components
+  services/              # API client
+  App.tsx                # Main app component
 docs/
   architecture.md        # Extended diagrams / flows
 infrastructure/
