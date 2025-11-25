@@ -30,10 +30,12 @@ class WorkflowResponse(BaseModel):
     domain: str
     executive_summary: str
     competitors: str
+    traffic_analysis: str = ""
     market_gap: str
     growth_opportunities: str
     meta_diagnostic: str
     recommendations: str
+    traffic_data: dict[str, Any] = Field(default_factory=dict)
     workflow_metadata: dict[str, dict[str, str]]
 
 

@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Any
 
 from app.services.ai_providers import AIProviderFactory, AIResponse
+from app.services.traffic_service import TrafficAnalysisService
 
 
 class WorkflowTask(str, Enum):
@@ -54,6 +55,8 @@ class WorkflowService:
     
     def __init__(self, workflow_config: WorkflowConfig | None = None):
         self.config = workflow_config or WorkflowConfig()
+        self.traffic_service = TrafficAnalysisService()
+        self.traffic_service = TrafficAnalysisService()
     
     def execute_task(
         self,
@@ -102,12 +105,13 @@ class WorkflowService:
             results[task] = self.execute_task(task, prompt, **kwargs)
         return results
     
-    def generate_market_research_report(
+    async def generate_market_research_report(
         self,
         domain: str,
         meta_data: dict[str, Any],
         competitor_data: dict[str, Any],
-        custom_config: dict[str, str] | None = None
+        custom_config: dict[str, str] | None = None,
+        competitor_domains: list[str] | None = None
     ) -> dict[str, Any]:
         """Generate a complete market research report using the workflow.
         
@@ -124,54 +128,78 @@ class WorkflowService:
             workflow_config = WorkflowConfig(custom_config)
             self.config = workflow_config
         
+        # Fetch traffic data for competitors if domains provided
+        competitor_traffic = {}
+        if competitor_domains:
+            competitor_traffic = await self.traffic_service.get_multiple_domains(competitor_domains)
+        
         # Step 1: Competitor Identification (Gemini 3 - web research)
+        competitor_context = ""
+        if competitor_traffic:
+            traffic_summary = "\n".join([
+                f"- {domain}: {data.get('monthly_visits', 'N/A')} visits, {data.get('bounce_rate', 'N/A')} bounce rate"
+                for domain, data in competitor_traffic.items()
+            ])
+            competitor_context = f"\n\nTraffic data for identified competitors:\n{traffic_summary}"
+        
         competitor_prompt = f"""
         Analyze the market for {domain} and identify the top 5 direct competitors.
         Focus on brands that compete in Meta Ads auctions.
         Provide: name, URL, and key strength for each competitor.
-        Format as JSON array.
+        Format as JSON array.{competitor_context}
         """
         
-        # Step 2: Market Gap Analysis (Claude - strategic thinking)
+        # Step 2: Traffic Analysis (using RapidAPI data)
+        traffic_analysis = ""
+        if competitor_traffic:
+            traffic_analysis = f"\n\nCompetitor Traffic Data (from RapidAPI):\n{competitor_traffic}"
+        
+        # Step 3: Market Gap Analysis (Claude - strategic thinking)
         gap_prompt = f"""
         Based on this Meta Ads data: {meta_data}
         And competitor data: {competitor_data}
+        {traffic_analysis}
         
         Identify the biggest market gap or inefficiency.
         What opportunity exists that competitors are missing?
         """
         
-        # Step 3: Growth Opportunities (Claude - strategic)
+        # Step 4: Growth Opportunities (Claude - strategic)
         growth_prompt = f"""
         For {domain}, identify 3 high-impact growth opportunities in Meta Ads.
         Consider: {meta_data} and {competitor_data}
+        {traffic_analysis}
         Provide actionable strategies with projected impact.
         """
         
-        # Step 4: Meta Ads Diagnostic (Gemini - data analysis)
+        # Step 5: Meta Ads Diagnostic (Gemini - data analysis)
         diagnostic_prompt = f"""
         Analyze this Meta Ads performance data: {meta_data}
+        {traffic_analysis}
         Identify the top 3 issues or optimization opportunities.
         Be specific and data-driven.
         """
         
-        # Step 5: Strategic Recommendations (Claude - nuanced)
+        # Step 6: Strategic Recommendations (Claude - nuanced)
         recommendations_prompt = f"""
         Based on all the analysis above, provide 5 strategic recommendations
         for {domain} to improve Meta Ads performance and capture market share.
+        Consider traffic patterns: {traffic_analysis}
         Prioritize by impact and feasibility.
         """
         
-        # Step 6: Executive Summary (Claude - polished)
+        # Step 7: Executive Summary (Claude - polished)
         summary_prompt = f"""
         Create an executive summary for {domain}'s market research analysis.
         Include: key findings, opportunities, and recommended actions.
+        Reference traffic insights: {traffic_analysis if traffic_analysis else 'N/A'}
         Keep it concise and actionable.
         """
         
         # Execute workflow
         tasks = [
             (WorkflowTask.COMPETITOR_IDENTIFICATION, competitor_prompt),
+            (WorkflowTask.TRAFFIC_ANALYSIS, f"Analyze traffic patterns: {traffic_analysis}" if traffic_analysis else "No traffic data available"),
             (WorkflowTask.MARKET_GAP_ANALYSIS, gap_prompt),
             (WorkflowTask.GROWTH_OPPORTUNITY_IDENTIFICATION, growth_prompt),
             (WorkflowTask.META_ADS_DIAGNOSTIC, diagnostic_prompt),
@@ -186,10 +214,12 @@ class WorkflowService:
             "domain": domain,
             "executive_summary": results[WorkflowTask.EXECUTIVE_SUMMARY].content,
             "competitors": results[WorkflowTask.COMPETITOR_IDENTIFICATION].content,
+            "traffic_analysis": results.get(WorkflowTask.TRAFFIC_ANALYSIS, AIResponse(content="N/A", provider="none", model="none")).content if WorkflowTask.TRAFFIC_ANALYSIS in results else "N/A",
             "market_gap": results[WorkflowTask.MARKET_GAP_ANALYSIS].content,
             "growth_opportunities": results[WorkflowTask.GROWTH_OPPORTUNITY_IDENTIFICATION].content,
             "meta_diagnostic": results[WorkflowTask.META_ADS_DIAGNOSTIC].content,
             "recommendations": results[WorkflowTask.STRATEGIC_RECOMMENDATIONS].content,
+            "traffic_data": competitor_traffic,  # Include raw traffic data
             "workflow_metadata": {
                 task.value: {
                     "provider": results[task].provider,

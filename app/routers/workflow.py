@@ -72,11 +72,23 @@ async def configure_workflow(config: WorkflowConfigRequest) -> dict[str, str]:
 async def execute_workflow(request: WorkflowExecutionRequest) -> WorkflowResponse:
     """Execute a complete market research workflow."""
     try:
-        result = workflow_service.generate_market_research_report(
+        # Extract competitor domains from competitor_data if available
+        competitor_domains = []
+        if request.competitor_data:
+            # Try to extract domains from competitor data
+            if isinstance(request.competitor_data, dict):
+                for key, value in request.competitor_data.items():
+                    if isinstance(value, dict) and "url" in value:
+                        competitor_domains.append(value["url"])
+                    elif isinstance(value, str) and ("http" in value or "." in value):
+                        competitor_domains.append(value)
+        
+        result = await workflow_service.generate_market_research_report(
             domain=request.domain,
             meta_data=request.meta_data,
             competitor_data=request.competitor_data,
-            custom_config=request.custom_config
+            custom_config=request.custom_config,
+            competitor_domains=competitor_domains if competitor_domains else None
         )
         return WorkflowResponse(**result)
     except Exception as e:

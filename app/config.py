@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     meta_business_id: str = Field("", alias="META_BUSINESS_ID")
 
     comp_intel_api_key: str = Field("", alias="COMP_INTEL_API_KEY")
+    
+    # RapidAPI for traffic analysis
+    rapidapi_key: str = Field("7e33689537mshbdba25e19a60d5ap1d4b02jsn6908c79", alias="RAPIDAPI_KEY")
+    rapidapi_host: str = Field("similar-web-data.p.rapidapi.com", alias="RAPIDAPI_HOST")
 
     llm_provider: str = Field("claude", alias="LLM_PROVIDER")
     anthropic_api_key: str = Field("", alias="ANTHROPIC_API_KEY")
