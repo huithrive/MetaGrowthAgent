@@ -10,32 +10,7 @@ interface AuthModalProps {
 
 const AuthModal: React.FC<AuthModalProps> = ({ onAuth }) => {
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    // Try backend login first, but always allow demo mode
-    try {
-      await apiService.login(email || 'user@example.com', password || 'demo');
-    } catch (backendError: any) {
-      // Backend not available - that's OK, we'll use demo mode
-      console.log('Backend not available, using demo mode');
-    }
-    
-    // Always authenticate (works with or without backend)
-    setTimeout(() => {
-      onAuth({
-        name: email ? email.split('@')[0] : "Growth Hacker",
-        email: email || 'user@example.com'
-      });
-      setLoading(false);
-    }, 500); // Small delay for UX
-  };
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -62,7 +37,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onAuth }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
       <div className="glass-panel p-8 rounded-2xl max-w-md w-full mx-4 border-t border-cyan-500/30 bg-black/50">
-        <div className="text-center mb-6">
+        <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
              <div className="bg-white p-2 rounded-lg">
                 <Logo className="h-8 w-auto" />
@@ -72,68 +47,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ onAuth }) => {
           <p className="text-slate-400 text-sm font-mono">
             Jarvis requires authorization to process sensitive growth data and generate your report.
           </p>
-        </div>
-
-        <form onSubmit={handleLogin} className="space-y-4 mb-4">
-          <div>
-            <label className="block text-sm text-slate-300 mb-2 font-mono uppercase">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
-              className="w-full bg-black border border-trek-blue/50 text-white p-3 rounded-lg focus:outline-none focus:border-trek-gold font-mono"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-300 mb-2 font-mono uppercase">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
-              className="w-full bg-black border border-trek-blue/50 text-white p-3 rounded-lg focus:outline-none focus:border-trek-gold font-mono"
-              required
-            />
-          </div>
-          
-          {error && (
-            <div className="text-trek-red text-sm font-mono uppercase">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-trek-blue hover:bg-white text-black font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-3 transition-colors"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin" size={18} />
-                Authenticating...
-              </>
-            ) : (
-              <>
-                <ShieldCheck size={18} />
-                Sign In
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-700"></div>
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="px-2 bg-black text-slate-500 font-mono">Or</span>
-          </div>
+          <p className="text-xs text-trek-blue/70 font-mono mt-3">
+            During our pre-launch period, we only support <span className="text-white font-semibold">Google sign-in</span>.
+            Email/password accounts will be available after public launch.
+          </p>
         </div>
 
         <button
