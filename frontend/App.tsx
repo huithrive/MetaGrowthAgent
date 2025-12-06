@@ -5,6 +5,7 @@ import LoadingSequence from './components/LoadingSequence';
 import CompetitorSelect from './components/CompetitorSelect';
 import Dashboard from './components/Dashboard';
 import AuthModal from './components/AuthModal';
+import VoiceAgent from './components/VoiceAgent';
 import { AppStage, Competitor, AnalysisResult, User } from './types';
 import apiService, { AnalysisResult as ApiAnalysisResult } from './services/api';
 
@@ -15,6 +16,7 @@ const App: React.FC = () => {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [showAuth, setShowAuth] = useState(false);
+  const [showVoice, setShowVoice] = useState(false);
   const [accountId, setAccountId] = useState<string>('');
 
   // Check for existing auth token on mount
@@ -230,9 +232,9 @@ const App: React.FC = () => {
       )}
 
       {stage === AppStage.SELECT_COMPETITORS && (
-        <CompetitorSelect 
-          competitors={competitors} 
-          onConfirm={handleCompetitorConfirm} 
+        <CompetitorSelect
+          competitors={competitors}
+          onConfirm={handleCompetitorConfirm}
         />
       )}
 
@@ -243,6 +245,61 @@ const App: React.FC = () => {
       {stage === AppStage.DASHBOARD && analysis && (
         <Dashboard data={analysis} websiteUrl={url} />
       )}
+
+      {/* Voice Agent Modal */}
+      {showVoice && (
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowVoice(false)}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <VoiceAgent />
+          </div>
+        </div>
+      )}
+
+      {/* Floating Voice Button */}
+      <button
+        onClick={() => setShowVoice(!showVoice)}
+        className="fixed bottom-8 right-8 z-40 w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-2xl hover:shadow-purple-500/50 transition-all duration-300 hover:scale-110 flex items-center justify-center group"
+        title="Voice AI Assistant"
+        style={{
+          boxShadow: showVoice
+            ? '0 0 40px rgba(147, 51, 234, 0.6)'
+            : '0 10px 30px rgba(0, 0, 0, 0.3)'
+        }}
+      >
+        {showVoice ? (
+          <svg
+            className="w-8 h-8"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        ) : (
+          <svg
+            className="w-8 h-8"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+            />
+          </svg>
+        )}
+        <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-gray-900 animate-pulse"></span>
+      </button>
     </div>
   );
 };
