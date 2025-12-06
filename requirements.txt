@@ -21,4 +21,5 @@ aiofiles>=23.2.0
 opentelemetry-sdk>=1.25.0
 opentelemetry-instrumentation-fastapi>=0.46b0
 pyjwt>=2.9.0
+deepgram-sdk>=3.0.0
 

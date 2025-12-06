@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     # Claude model selection
     claude_model: str = Field("claude-3-5-sonnet-20240620", alias="CLAUDE_MODEL")
 
+    # Deepgram Voice AI configuration
+    deepgram_api_key: str = Field("", alias="DEEPGRAM_API_KEY")
+
     alert_webhook_url: str = Field("", alias="ALERT_WEBHOOK_URL")
     alert_emails: str = Field("", alias="ALERT_EMAILS")
 
